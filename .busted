@@ -1,0 +1,6 @@
+return {
+  _all = {
+    lpath = "./mecbook.koplugin/?.lua;./?.lua",
+    ROOT = { "spec" },
+  },
+}

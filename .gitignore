@@ -1,0 +1,5 @@
+mecbook_tokens.lua
+*.log
+.luarocks/
+luacov.*
+dist/
