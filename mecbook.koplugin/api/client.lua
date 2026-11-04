@@ -116,6 +116,7 @@ function Client:search(query, page, limit)
     local q = tostring(query):gsub("[^%w%-%._~]", function(c) return string.format("%%%02X", c:byte()) end)
     return self:request("GET", string.format("/api/backend/books/search?query=%s&page=%d&limit=%d", q, page or 1, limit or 20))
 end
+function Client:book(book_id) return self:request("GET", "/api/backend/books/" .. book_id) end
 function Client:manifest(book_id) return self:request("GET", "/api/backend/books/" .. book_id .. "/manifest") end
 function Client:active_rentals() return self:request("GET", "/api/backend/rentals?status=active") end
 function Client:checkout(book_id) return self:request("POST", "/api/backend/rentals/checkout", { bookId = book_id }) end

@@ -3,13 +3,20 @@ local ConfirmBox = require("ui/widget/confirmbox")
 local DataStorage = require("datastorage")
 local Dispatcher = require("dispatcher")
 local DocSettings = require("docsettings")
+local Font = require("ui/font")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local JSON = require("json")
 local LuaSettings = require("luasettings")
 local Menu = require("ui/widget/menu")
+local Size = require("ui/size")
 local NetworkMgr = require("ui/network/manager")
 local ReadHistory = require("readhistory")
+local TextBoxWidget = require("ui/widget/textboxwidget")
+local TextViewer = require("ui/widget/textviewer")
+local TitleBar = require("ui/widget/titlebar")
+local VerticalGroup = require("ui/widget/verticalgroup")
+local VerticalSpan = require("ui/widget/verticalspan")
 local Trapper = require("ui/trapper")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
@@ -27,6 +34,7 @@ local T = ffiutil.template
 local Client = require("api.client")
 local Builder = require("epub.builder")
 local Manager = require("loans.manager")
+local BookDetail = require("books.detail")
 local Metadata = require("storage.metadata")
 local Paths = require("storage.paths")
 local Rentals = require("loans.rentals")
@@ -76,17 +84,67 @@ local function format_due(epoch)
     return os.date("%d/%m/%Y às %H:%M", epoch)
 end
 
-local function show_dialog(title, rows)
+-- On devices that report a hardware keyboard with the virtual one disabled, InputText ignores taps,
+-- so the field never shows a keyboard. Show it on tap anyway, and never before.
+local function keyboard_on_tap(dialog)
+    local input = dialog._input_widget
+    local original = input.onTapTextBox
+    if not original then return end
+    input.onTapTextBox = function(widget, ...)
+        local result = original(widget, ...)
+        if not dialog:isKeyboardVisible() then
+            dialog.skip_first_show_keyboard = nil
+            widget:onShowKeyboard()
+        end
+        return result
+    end
+end
+
+local function run_safely(fn)
+    local ok, err = xpcall(fn, debug.traceback)
+    if not ok then
+        logger.warn("MECBook: action failed:", tostring(err))
+        UIManager:show(InfoMessage:new{ text = T(_("Algo deu errado: %1"), tostring(err):match("^[^\n]*")) })
+    end
+end
+
+-- ButtonDialog sizes itself to its content; the title bar (with the close X) is added as a widget
+-- because ButtonDialog has no title bar of its own. `content` is a string or a list of
+-- {text, face, size, gap} blocks.
+local function show_dialog(content, rows)
     local dialog
     local buttons = {}
     for _i, row in ipairs(rows) do
         buttons[#buttons + 1] = {{ text = row[1], callback = function()
             UIManager:close(dialog)
-            if row[2] then row[2]() end
+            if row[2] then run_safely(row[2]) end
         end }}
     end
-    buttons[#buttons + 1] = {{ icon = "close", callback = function() UIManager:close(dialog) end }}
-    dialog = ButtonDialog:new{ title = title, buttons = buttons }
+    dialog = ButtonDialog:new{ buttons = buttons }
+    local width = dialog:getAddedWidgetAvailableWidth()
+    -- A single addWidget: ButtonDialog frees the previously added widgets on every call, which blanks their text.
+    local group = VerticalGroup:new{ align = "left" }
+    group[#group + 1] = TitleBar:new{
+        width = width,
+        title = _("MECBook"),
+        with_bottom_line = true,
+        close_callback = function() UIManager:close(dialog) end,
+        show_parent = dialog,
+    }
+    if type(content) == "string" then content = {{ text = content }} end
+    for _i, block in ipairs(content or {}) do
+        if block.text and block.text ~= "" then
+            group[#group + 1] = VerticalSpan:new{ width = block.gap and Size.padding.large or Size.padding.small }
+            group[#group + 1] = TextBoxWidget:new{
+                text = block.text,
+                width = width,
+                face = Font:getFace(block.face or "cfont", block.size or 20),
+            }
+        end
+    end
+    group[#group + 1] = VerticalSpan:new{ width = Size.padding.large }
+    group.not_focusable = true
+    dialog:addWidget(group)
     UIManager:show(dialog)
     return dialog
 end
@@ -446,7 +504,7 @@ end
 
 function Mecbook:showHome()
     self:showDisclaimerOnce()
-    show_dialog(_("MECBook"), {
+    show_dialog(nil, {
         { _("Meu empréstimo"), function() self:showLoan() end },
         { _("Buscar livros"), function() self:searchBooks() end },
         { _("Avisos de vencimento"), function() self:showWarnDialog() end },
@@ -515,7 +573,7 @@ function Mecbook:showWarnDialog()
             }},
         }
         UIManager:show(dialog)
-        dialog:onShowKeyboard()
+        keyboard_on_tap(dialog)
     end }
     rows[#rows + 1] = { (#current() == 0 and "[x] " or "[  ] ") .. _("Não avisar"), function()
         save({})
@@ -637,7 +695,7 @@ function Mecbook:searchBooks()
         }},
     }
     UIManager:show(dialog)
-    dialog:onShowKeyboard()
+    keyboard_on_tap(dialog)
 end
 
 function Mecbook:doSearch(query)
@@ -665,18 +723,58 @@ function Mecbook:doSearch(query)
         covers_fullscreen = true,
         is_borderless = true,
         onMenuSelect = function(_menu, item)
-            UIManager:show(ConfirmBox:new{
-                text = T(_("Pegar “%1” emprestado por 14 dias?\n\nIsso conta como 1 dos seus 4 empréstimos a cada 30 dias e 1 dos 4 resgates deste título (empréstimos e renovações somam)."), item.title),
-                ok_text = _("Pegar"),
-                ok_callback = function()
-                    UIManager:close(menu)
-                    self:borrow(item.book_id, item.title)
-                end,
-            })
+            self:showBook(item)
         end,
-        close_callback = function() UIManager:close(menu) end,
+        close_callback = function()
+            self.results_menu = nil
+            UIManager:close(menu)
+        end,
     }
+    self.results_menu = menu
     UIManager:show(menu)
+end
+
+function Mecbook:showBook(item)
+    NetworkMgr:runWhenOnline(function()
+        local ok, data, code = shared.api:book(item.book_id)
+        if not ok then return self:showFailure(data, code) end
+        self:showBookDetail(item, data)
+    end)
+end
+
+function Mecbook:showBookDetail(item, data)
+    local detail = BookDetail.summary(data)
+    local rows = {}
+    if detail.borrowable then
+        local label = detail.public_domain and _("Ler") or _("Pegar emprestado")
+        rows[#rows + 1] = { label, function() self:borrow(item.book_id, item.title) end }
+    end
+    if detail.truncated then
+        rows[#rows + 1] = { _("Ler sinopse completa"), function() self:showSynopsis(item, data, detail) end }
+    end
+    local note
+    if detail.borrowable and not detail.public_domain then
+        note = _("Conta como 1 dos seus 4 empréstimos a cada 30 dias e 1 dos 4 resgates deste título. Renovações também contam.")
+    end
+    show_dialog({
+        { text = detail.title, face = "tfont", size = 26 },
+        { text = detail.authors, size = 20 },
+        { text = detail.facts, size = 17 },
+        { text = detail.categories, size = 17 },
+        { text = detail.status, face = "tfont", size = 18, gap = true },
+        { text = detail.description, size = 18, gap = true },
+        { text = note, size = 16, gap = true },
+    }, rows)
+end
+
+function Mecbook:showSynopsis(item, data, detail)
+    UIManager:show(TextViewer:new{
+        title = detail.title,
+        text = detail.full_description,
+        show_menu = false,
+        buttons_table = {},
+        close_callback = function() self:showBookDetail(item, data) end,
+    })
 end
 
 local CHECKOUT_ERRORS = {
@@ -688,9 +786,10 @@ local CHECKOUT_ERRORS = {
 function Mecbook:borrow(book_id, title)
     if not self:ensureToken() then return end
     local current = shared.manager:loan()
-    if not current then return self:doBorrow(book_id, title) end
+    if current and not shared.manager.fs.exists(current.path) then current = nil end
+    if not current then return self:doBorrow(book_id) end
     if tostring(current.book_id) == tostring(book_id) then
-        show_dialog(T(_("Você já está com “%1” emprestado."), current.title), {
+        show_dialog(T(_("Você já está com “%1” emprestado e baixado."), current.title), {
             { _("Ler agora"), function() reader_ui():showReader(current.path) end },
         })
         return
@@ -701,9 +800,42 @@ function Mecbook:borrow(book_id, title)
     })
 end
 
-function Mecbook:doBorrow(book_id, title)
+-- A loan for another book than the one asked for: nothing is borrowed, the reader is pointed at the loan.
+function Mecbook:showOtherLoan(rental)
+    local text = T(_("Você já está com “%1” emprestado, e só dá para ter um livro por vez."), rental.title or _("outro livro"))
+    if rental.due then
+        text = text .. "\n\n" .. T(_("A plataforma só libera outro empréstimo quando este terminar, em %1."), format_due(rental.due))
+    end
+    show_dialog(text, {
+        { T(_("Baixar “%1” neste Kindle"), rental.title or _("o livro")), function()
+            self:withProgress(function() self:download(rental) end)
+        end },
+    })
+end
+
+-- Must run inside Trapper:wrap. Returns the account's active rental or nil; shows the failure itself.
+function Mecbook:activeRental()
+    local ok, data, code = shared.api:active_rentals()
+    if not ok then
+        Trapper:clear()
+        self:showFailure(data, code)
+        return nil, true
+    end
+    return Rentals.list(data, os.time())[1]
+end
+
+function Mecbook:doBorrow(book_id)
     self:withProgress(function()
         logger.info("MECBook: borrow start")
+        Trapper:info(_("Verificando seus empréstimos…"))
+        local active, failed = self:activeRental()
+        if failed then return end
+        if active then
+            if tostring(active.book_id) == tostring(book_id) then return self:download(active) end
+            Trapper:clear()
+            return self:showOtherLoan(active)
+        end
+
         Trapper:info(_("Pegando o livro emprestado…"))
         local ok, data, code = shared.api:checkout(book_id)
         logger.info("MECBook: checkout result:", tostring(ok), tostring(code))
@@ -718,14 +850,9 @@ function Mecbook:doBorrow(book_id, title)
             return
         end
 
-        local lok, ldata, lcode = shared.api:active_rentals()
-        if not lok then
-            Trapper:clear()
-            return self:showFailure(ldata, lcode)
-        end
-        for _i, rental in ipairs(Rentals.list(ldata, os.time())) do
-            if tostring(rental.book_id) == tostring(book_id) then return self:download(rental) end
-        end
+        local rental, listing_failed = self:activeRental()
+        if listing_failed then return end
+        if rental and tostring(rental.book_id) == tostring(book_id) then return self:download(rental) end
         Trapper:clear()
         UIManager:show(InfoMessage:new{ text = _("O empréstimo foi feito, mas não encontrei o livro na sua conta. Tente MECBook > Meu empréstimo.") })
     end)
@@ -783,6 +910,10 @@ function Mecbook:download(rental)
     shared.meta.restore(rental.book_id, path)
     self:armTimer()
     Trapper:clear()
+    if self.results_menu then
+        UIManager:close(self.results_menu)
+        self.results_menu = nil
+    end
     UIManager:nextTick(function() reader_ui():showReader(path) end)
 end
 
