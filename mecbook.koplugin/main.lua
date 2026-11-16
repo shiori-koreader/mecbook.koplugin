@@ -45,7 +45,7 @@ local function reader_ui()
     return require("apps/reader/readerui")
 end
 
-local VERSION = "1.0.0"
+local VERSION = "1.1.0"
 local TOKEN_FILE = "mecbook_tokens.lua"
 
 local DISCLAIMER = _([[O MECBook é um projeto independente e não oficial, sem vínculo com o MEC nem com o MEC Livros.
