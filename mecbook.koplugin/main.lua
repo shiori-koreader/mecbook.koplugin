@@ -33,6 +33,7 @@ local T = ffiutil.template
 
 local Client = require("api.client")
 local Builder = require("epub.builder")
+local CacheGuard = require("guard.cache")
 local Manager = require("loans.manager")
 local BookDetail = require("books.detail")
 local Metadata = require("storage.metadata")
@@ -246,6 +247,7 @@ local function install_guard()
     local ReaderUI = reader_ui()
     if ReaderUI._mecbook_guard then return end
     ReaderUI._mecbook_guard = true
+    CacheGuard.install(require("ui/widget/filechooser"), require("apps/filemanager/filemanager"), shared.paths.cache_dir)
     local original = ReaderUI.showReader
     ReaderUI.showReader = function(self, file, ...)
         local allowed, removal = shared.manager:before_open(file)
@@ -891,7 +893,7 @@ function Mecbook:download(rental)
         return
     end
 
-    local path = shared.paths.book(rental.book_id)
+    local path = shared.paths.book(rental.book_id, rental.title or result)
     util.makePath(shared.paths.cache_dir)
     if not write_file(path, epub) then
         Trapper:clear()
