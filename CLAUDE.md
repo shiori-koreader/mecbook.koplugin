@@ -6,7 +6,7 @@ Repository: `shiori-koreader/mecbook.koplugin` (public). License: MIT.
 
 ## Working agreements
 
-- Talk to the maintainer (Thiago) in Brazilian Portuguese. Everything written into the repo (code, comments, commits, README, docs) is in English, except user-facing UI strings, which are pt-BR.
+- Talk to the maintainer (Thiago) in Brazilian Portuguese. Code, comments, commits and docs are in English, except user-facing UI strings (pt-BR). The README is pt-BR (`README.md`) with an English copy (`README.en.md`), and release notes are bilingual (`.github/release-notes.md`): keep both READMEs in sync.
 - Comments only explain *why*. Never restate what the code does.
 - Thiago is a QA engineer: business logic must be testable without KOReader and without the network. Keep KOReader UI and I/O at the edges.
 - Ask before changing any decision listed under "Fixed decisions".
