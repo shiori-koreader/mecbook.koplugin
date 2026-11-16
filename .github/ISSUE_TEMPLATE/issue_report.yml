@@ -1,0 +1,110 @@
+name: 🐞 Relato de problema
+description: Relate um problema ou bug no MECBook
+labels: [bug]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        **Nunca cole suas chaves de acesso** (`auth_token` e `refresh_token`) nem o conteúdo de `mecbook_tokens.lua` ou de `mecbook_settings.lua` aqui. Elas dão acesso à sua conta. Apague-as de qualquer log antes de colar.
+
+  - type: textarea
+    id: reproduce-steps
+    attributes:
+      label: Passos para reproduzir
+      description: Descreva como o problema acontece.
+      placeholder: |
+        Exemplo:
+          1. Primeiro passo
+          2. Segundo passo
+          3. O problema acontece aqui
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Comportamento esperado
+      description: Explique o que você esperava que acontecesse.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Comportamento atual
+      description: Explique o que acontece de fato. Se aparecer uma mensagem na tela, copie o texto.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Se o KOReader travou ou o plugin deu erro, anexe o arquivo `crash.log` da pasta `koreader/` do aparelho (cole o texto ou anexe o arquivo). Confira se não há chaves de acesso nele.
+
+  - type: input
+    id: mecbook-version
+    attributes:
+      label: Versão do MECBook
+      description: A versão da release que você instalou (em **MECBook > Sobre**).
+      placeholder: 'Exemplo: "v1.1.0"'
+    validations:
+      required: true
+
+  - type: input
+    id: koreader-version
+    attributes:
+      label: Versão do KOReader
+      description: Em **Menu superior > Ajuda > Sobre o KOReader** (Help > About).
+      placeholder: 'Exemplo: "v2025.10"'
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Aparelho
+      description: Modelo e versão do firmware.
+      placeholder: 'Exemplo: "Kindle Paperwhite 10ª geração, firmware 5.18.1.1.1"'
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-details
+    attributes:
+      label: Outros detalhes
+      placeholder: Detalhes adicionais e anexos.
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Confirmações
+      description: Leia com atenção. Relatos que ignorarem isto podem ser fechados.
+      options:
+        - label: Procurei nas issues existentes e este relato é novo, **NÃO** é duplicado nem relacionado a outra issue aberta.
+          required: true
+        - label: Escrevi um título curto e informativo.
+          required: true
+        - label: Conferi a seção de [limitações conhecidas](https://github.com/shiori-koreader/mecbook.koplugin#limitações-conhecidas) do README.
+          required: true
+        - label: Atualizei o plugin para **[a última versão](https://github.com/shiori-koreader/mecbook.koplugin/releases/latest)**.
+          required: true
+        - label: Não colei minhas chaves de acesso em nenhum campo deste formulário.
+          required: true
+        - label: Preenchi todas as informações pedidas neste formulário.
+          required: true
+
+  - type: textarea
+    id: prioritisation
+    attributes:
+      label: Este problema é importante para você?
+      description: |
+        **Não altere este campo!**
+
+        Este modelo permite votar com uma reação :+1: nas issues que você acha importantes. Isso não garante que as mais votadas serão resolvidas primeiro, mas ajuda a entender o que importa para quem usa.
+      value: |
+        Adicione uma reação :+1: nas [issues que você acha importantes].
+
+        [issues que você acha importantes]: https://github.com/shiori-koreader/mecbook.koplugin/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc

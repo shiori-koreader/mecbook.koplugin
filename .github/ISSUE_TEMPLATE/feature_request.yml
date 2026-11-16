@@ -1,0 +1,56 @@
+name: 🌟 Sugestão de recurso
+description: Sugira uma melhoria para o MECBook
+labels: [enhancement]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        O MECBook é mantido em tempo pessoal, então sugestões são bem-vindas, mas podem ser recusadas ou demorar. O plugin não terá recursos de exportar ou copiar livros.
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Descreva o recurso sugerido
+      description: Como o MECBook pode melhorar?
+      placeholder: |
+        Exemplo:
+          "Deveria funcionar assim..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-details
+    attributes:
+      label: Outros detalhes
+      placeholder: Detalhes adicionais e anexos.
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Confirmações
+      description: Leia com atenção. Sugestões que ignorarem isto podem ser fechadas.
+      options:
+        - label: Procurei nas issues existentes e esta sugestão é nova, **NÃO** é duplicada nem relacionada a outra issue aberta.
+          required: true
+        - label: Escrevi um título curto e informativo.
+          required: true
+        - label: Atualizei o plugin para **[a última versão](https://github.com/shiori-koreader/mecbook.koplugin/releases/latest)**.
+          required: true
+        - label: Conferi os menus do plugin e o README e o recurso ainda não existe.
+          required: true
+        - label: Preencherei todas as informações pedidas neste formulário.
+          required: true
+
+  - type: textarea
+    id: prioritisation
+    attributes:
+      label: Esta sugestão é importante para você?
+      description: |
+        **Não altere este campo!**
+
+        Este modelo permite votar com uma reação :+1: nas issues que você acha importantes. Isso não garante que as mais votadas serão resolvidas primeiro, mas ajuda a entender o que importa para quem usa.
+      value: |
+        Adicione uma reação :+1: nas [issues que você acha importantes].
+
+        [issues que você acha importantes]: https://github.com/shiori-koreader/mecbook.koplugin/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc

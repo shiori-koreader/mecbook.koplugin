@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Guia do MECBook
+    url: https://github.com/shiori-koreader/mecbook.koplugin#readme
+    about: Instalação, chaves de acesso, uso e limitações conhecidas
