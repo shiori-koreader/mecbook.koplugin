@@ -501,7 +501,7 @@ function Mecbook:importTokensAndShow()
 end
 
 function Mecbook:showAbout()
-    UIManager:show(InfoMessage:new{ text = DISCLAIMER })
+    UIManager:show(InfoMessage:new{ text = T(_("MECBook v%1\n\n%2"), VERSION, DISCLAIMER) })
 end
 
 function Mecbook:showHome()
