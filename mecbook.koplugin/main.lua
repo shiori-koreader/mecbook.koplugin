@@ -48,11 +48,11 @@ end
 local VERSION = "1.0.0"
 local TOKEN_FILE = "mecbook_tokens.lua"
 
-local DISCLAIMER = _([[O MECBook não é afiliado ao MEC.
+local DISCLAIMER = _([[O MECBook é um projeto independente e não oficial, sem vínculo com o MEC nem com o MEC Livros.
 
-Não é uma ferramenta de pirataria e não serve para redistribuir livros: ele só acessa os empréstimos ativos da sua própria conta, e o livro é apagado do Kindle quando o empréstimo termina.
+Ele foi feito para a leitura pessoal dos empréstimos da sua própria conta: o livro fica protegido no aparelho, não pode ser exportado e é removido quando o empréstimo termina.
 
-Cada pessoa usa a própria conta, por sua conta e risco. O MEC pode bloquear o acesso a qualquer momento.]])
+Cada pessoa usa a própria conta, por sua conta e risco, respeitando os termos de uso da plataforma. O MEC pode bloquear o acesso a qualquer momento.]])
 
 local function file_exists(path)
     return lfs.attributes(path, "mode") == "file"
